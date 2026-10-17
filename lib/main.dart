@@ -268,7 +268,12 @@ class _DimonHomePageState extends State<DimonHomePage> {
                 ),
                 child: const Icon(Icons.graphic_eq, size: 56, color: Color(0xFF90CAF9)),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
+              const Text(
+                'Голосовые ответы озвучиваются ИИ',
+                style: TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+              const SizedBox(height: 16),
               Expanded(
                 child: Container(
                   width: double.infinity,

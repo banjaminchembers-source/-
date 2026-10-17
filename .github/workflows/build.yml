@@ -63,6 +63,21 @@ jobs:
           path.write_text(updated)
           print("Updated Kotlin Gradle plugin to 2.2.20")
 
+      - name: Configure Android SDK levels for plugins
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path("android/app/build.gradle")
+          text = path.read_text()
+          text, compile_count = re.subn(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 36', text)
+          text, min_count = re.subn(r'minSdk\s*=\s*flutter\.minSdkVersion', 'minSdk = 24', text)
+          if compile_count == 0 or min_count == 0:
+              raise SystemExit("Could not update compileSdk/minSdk in android/app/build.gradle")
+          path.write_text(text)
+          print("Configured compileSdk 36 and minSdk 24")
+
       - name: Install dependencies
         run: flutter pub get
 

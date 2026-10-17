@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:device_apps/device_apps.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
@@ -146,16 +146,16 @@ class _DimonHomePageState extends State<DimonHomePage> {
     if (lower.contains('открой') || lower.contains('запусти')) {
       if (lower.contains('ютуб') || lower.contains('youtube')) {
         await _speak('Открываю YouTube, босс.');
-        final opened = await DeviceApps.openApp('com.google.android.youtube');
-        if (opened != true) {
+        final opened = await launchUrl(Uri.parse('https://www.youtube.com'), mode: LaunchMode.externalApplication);
+        if (!opened) {
           await _speak('Не получилось открыть YouTube. Возможно, приложение не установлено.');
         }
         return;
       }
       if (lower.contains('телеграм') || lower.contains('telegram')) {
         await _speak('Секунду, запускаю Telegram.');
-        final opened = await DeviceApps.openApp('org.telegram.messenger');
-        if (opened != true) {
+        final opened = await launchUrl(Uri.parse('https://t.me'), mode: LaunchMode.externalApplication);
+        if (!opened) {
           await _speak('Не получилось открыть Telegram. Возможно, приложение не установлено.');
         }
         return;

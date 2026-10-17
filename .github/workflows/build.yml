@@ -45,6 +45,24 @@ jobs:
             cp /tmp/dimon-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           fi
 
+      - name: Use Kotlin version compatible with current plugins
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path("android/settings.gradle")
+          text = path.read_text()
+          updated, count = re.subn(
+              r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
+              r'\g<1>2.2.20\2',
+              text
+          )
+          if count == 0:
+              raise SystemExit("Could not find Kotlin Android plugin version in android/settings.gradle")
+          path.write_text(updated)
+          print("Updated Kotlin Gradle plugin to 2.2.20")
+
       - name: Install dependencies
         run: flutter pub get
 

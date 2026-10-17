@@ -1,0 +1,68 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      # The uploaded project contains the Dart app but not Flutter's generated
+      # Android Gradle wrapper/scaffolding. Generate it using Flutter itself,
+      # then restore the app's custom manifest with microphone/network permissions.
+      - name: Generate Android platform files
+        shell: bash
+        run: |
+          if [ -f android/app/src/main/AndroidManifest.xml ]; then
+            cp android/app/src/main/AndroidManifest.xml /tmp/dimon-AndroidManifest.xml
+          fi
+          flutter create --platforms=android --org com.example --project-name dimon_assistant /tmp/dimon-scaffold
+          rm -rf android
+          cp -R /tmp/dimon-scaffold/android ./android
+          if [ -f /tmp/dimon-AndroidManifest.xml ]; then
+            cp /tmp/dimon-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        env:
+          APP_API_BASE_URL: ${{ secrets.APP_API_BASE_URL }}
+        shell: bash
+        run: |
+          if [ -n "$APP_API_BASE_URL" ]; then
+            flutter build apk --release --dart-define=APP_API_BASE_URL="$APP_API_BASE_URL"
+          else
+            flutter build apk --release
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dimon-assistant-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14

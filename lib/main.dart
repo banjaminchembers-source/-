@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
@@ -9,7 +10,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 const String apiBaseUrl = String.fromEnvironment(
   'APP_API_BASE_URL',
-  defaultValue: '',
+  defaultValue: 'https://dimon-assistant-api.onrender.com',
 );
 
 void main() {
@@ -49,6 +50,8 @@ class DimonHomePage extends StatefulWidget {
 class _DimonHomePageState extends State<DimonHomePage> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _useNaturalVoice = true;
   final TextEditingController _inputController = TextEditingController();
 
   bool _speechAvailable = false;
@@ -83,7 +86,7 @@ class _DimonHomePageState extends State<DimonHomePage> {
 
     try {
       await _tts.setLanguage('ru-RU');
-      await _tts.setPitch(0.8);
+      await _tts.setPitch(0.95);
       await _tts.setSpeechRate(0.48);
       await _tts.awaitSpeakCompletion(true);
     } catch (_) {
@@ -217,7 +220,146 @@ class _DimonHomePageState extends State<DimonHomePage> {
   }
 
   Future<void> _speak(String text) async {
+    // Prefer natural server-generated Russian speech; fall back to Android TTS.
+    if (_useNaturalVoice && apiBaseUrl.trim().isNotEmpty && text.trim().isNotEmpty) {
+      try {
+        final response = await http.post(
+          Uri.parse('${apiBaseUrl.replaceAll(RegExp(r'/+
+
+  @override
+  void dispose() {
+    _speech.stop();
+    _tts.stop();
+    _audioPlayer.dispose();
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ДИМОН ИИ'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: _speakReplies ? 'Выключить озвучку' : 'Включить озвучку',
+            onPressed: () => setState(() => _speakReplies = !_speakReplies),
+            icon: Icon(_speakReplies ? Icons.volume_up : Icons.volume_off),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 104,
+                height: 104,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF15283B),
+                  border: Border.all(color: const Color(0xFF42A5F5), width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x3342A5F5), blurRadius: 24, spreadRadius: 3),
+                  ],
+                ),
+                child: const Icon(Icons.graphic_eq, size: 56, color: Color(0xFF90CAF9)),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF121922),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      _text,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 19, height: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _inputController,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendTypedMessage(),
+                decoration: InputDecoration(
+                  hintText: 'Напиши Димону...',
+                  filled: true,
+                  fillColor: const Color(0xFF121922),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  suffixIcon: IconButton(
+                    onPressed: _isBusy ? null : _sendTypedMessage,
+                    icon: const Icon(Icons.send),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: _toggleListening,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 78,
+                  height: 78,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isListening ? Colors.red.shade700 : const Color(0xFF1976D2),
+                  ),
+                  child: Icon(
+                    _isBusy
+                        ? Icons.hourglass_top
+                        : _isListening
+                            ? Icons.stop
+                            : Icons.mic,
+                    size: 38,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isBusy
+                    ? 'Димон обрабатывает запрос...'
+                    : _isListening
+                        ? 'Слушаю. Нажми, чтобы отправить.'
+                        : 'Нажми на микрофон, скажи команду и нажми снова',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white60, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+), '')}/speech'),
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: jsonEncode({'text': text}),
+        ).timeout(const Duration(seconds: 45));
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          await _tts.stop();
+          await _audioPlayer.stop();
+          await _audioPlayer.play(BytesSource(response.bodyBytes, mimeType: 'audio/mpeg'));
+          return;
+        }
+      } catch (_) {
+        // If network/TTS service is unavailable, use the device's voice.
+      }
+    }
     try {
+      await _audioPlayer.stop();
       await _tts.stop();
       await _tts.speak(text);
     } catch (_) {

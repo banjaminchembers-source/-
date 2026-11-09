@@ -38,6 +38,9 @@ jobs:
           s=p.read_text().replace("compileSdk = flutter.compileSdkVersion", "compileSdk = 36")
           s=s.replace("minSdk = flutter.minSdkVersion", "minSdk = 24")
           p.write_text(s)
+          p=Path("android/build.gradle")
+          s=p.read_text().replace("mavenCentral()", 'maven { url "https://maven.wso2.org/nexus/content/repositories/central/" }\\n        mavenCentral()')
+          p.write_text(s)
           p=Path("android/settings.gradle")
           lines=p.read_text().splitlines()
           found=False

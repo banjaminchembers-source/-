@@ -43,7 +43,9 @@ jobs:
           found=False
           for i,line in enumerate(lines):
               if 'id "org.jetbrains.kotlin.android" version "' in line:
-                  lines[i]=line.split('version "')[0] + 'version "2.2.20"'
+                  before, after=line.split('version "',1)
+                  _, suffix=after.split('"',1)
+                  lines[i]=before + 'version "2.2.20"' + suffix
                   found=True
           if not found:
               raise SystemExit("Could not locate Kotlin Android Gradle plugin declaration")

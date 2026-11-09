@@ -29,7 +29,7 @@ jobs:
           cp /tmp/cookie-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           mkdir -p android/app/src/main/kotlin/com/example/dimon_assistant
           cp android-src/com/example/dimon_assistant/*.kt android/app/src/main/kotlin/com/example/dimon_assistant/
-      - name: Configure Android SDK and Kotlin versions
+      - name: Configure Android SDK levels
         shell: bash
         run: |
           python3 - <<'PY'
@@ -38,21 +38,6 @@ jobs:
           s=p.read_text().replace("compileSdk = flutter.compileSdkVersion", "compileSdk = 36")
           s=s.replace("minSdk = flutter.minSdkVersion", "minSdk = 24")
           p.write_text(s)
-          p=Path("android/build.gradle")
-          s=p.read_text().replace("mavenCentral()", 'maven { url "https://maven.wso2.org/nexus/content/repositories/central/" }\n        mavenCentral()')
-          p.write_text(s)
-          p=Path("android/settings.gradle")
-          lines=p.read_text().splitlines()
-          found=False
-          for i,line in enumerate(lines):
-              if 'id "org.jetbrains.kotlin.android" version "' in line:
-                  before, after=line.split('version "',1)
-                  _, suffix=after.split('"',1)
-                  lines[i]=before + 'version "2.2.20"' + suffix
-                  found=True
-          if not found:
-              raise SystemExit("Could not locate Kotlin Android Gradle plugin declaration")
-          p.write_text("\n".join(lines) + "\n")
           PY
       - run: flutter pub get
       - name: Build release APK

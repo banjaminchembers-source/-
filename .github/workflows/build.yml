@@ -1,86 +1,47 @@
-name: Build Android APK
-
+name: Build Cookie Dimon APK
 on:
   push:
-    branches: [main]
+    branches: [main, cookie-wave-mascot]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   build:
-    name: Build release APK
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: stable
           cache: true
-
-      # The uploaded project contains the Dart app but not Flutter's generated
-      # Android Gradle wrapper/scaffolding. Generate it using Flutter itself,
-      # then restore the app's custom manifest with microphone/network permissions.
-      - name: Generate Android platform files
+      - name: Generate Android platform and add floating mascot
         shell: bash
         run: |
-          if [ -f android/app/src/main/AndroidManifest.xml ]; then
-            cp android/app/src/main/AndroidManifest.xml /tmp/dimon-AndroidManifest.xml
-          fi
-          flutter create --platforms=android --org com.example --project-name dimon_assistant /tmp/dimon-scaffold
+          cp android/app/src/main/AndroidManifest.xml /tmp/cookie-AndroidManifest.xml
+          flutter create --platforms=android --org com.example --project-name dimon_assistant /tmp/cookie-scaffold
           rm -rf android
-          cp -R /tmp/dimon-scaffold/android ./android
-          if [ -f /tmp/dimon-AndroidManifest.xml ]; then
-            cp /tmp/dimon-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
-          fi
-
-      - name: Use Kotlin version compatible with current plugins
+          cp -R /tmp/cookie-scaffold/android ./android
+          cp /tmp/cookie-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          mkdir -p android/app/src/main/kotlin/com/example/dimon_assistant
+          cp android-src/com/example/dimon_assistant/*.kt android/app/src/main/kotlin/com/example/dimon_assistant/
+      - name: Configure Android SDK levels
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
-          path = Path("android/settings.gradle")
-          text = path.read_text()
-          updated, count = re.subn(
-              r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
-              r'\g<1>2.2.20\2',
-              text
-          )
-          if count == 0:
-              raise SystemExit("Could not find Kotlin Android plugin version in android/settings.gradle")
-          path.write_text(updated)
-          print("Updated Kotlin Gradle plugin to 2.2.20")
-
-      - name: Configure Android SDK levels for plugins
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path("android/app/build.gradle")
-          text = path.read_text()
-          text, compile_count = re.subn(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 36', text)
-          text, min_count = re.subn(r'minSdk\s*=\s*flutter\.minSdkVersion', 'minSdk = 24', text)
-          if compile_count == 0 or min_count == 0:
-              raise SystemExit("Could not update compileSdk/minSdk in android/app/build.gradle")
-          path.write_text(text)
-          print("Configured compileSdk 36 and minSdk 24")
-
-      - name: Install dependencies
-        run: flutter pub get
-
+          p=Path("android/app/build.gradle")
+          s=p.read_text()
+          s=re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion','compileSdk = 36',s)
+          s=re.sub(r'minSdk\s*=\s*flutter\.minSdkVersion','minSdk = 24',s)
+          p.write_text(s)
+          PY
+      - run: flutter pub get
       - name: Build release APK
         env:
           APP_API_BASE_URL: ${{ secrets.APP_API_BASE_URL }}
@@ -91,11 +52,9 @@ jobs:
           else
             flutter build apk --release
           fi
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: dimon-assistant-release-apk
+          name: cookie-dimon-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

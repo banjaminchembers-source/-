@@ -29,6 +29,11 @@ jobs:
           cp /tmp/cookie-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           mkdir -p android/app/src/main/kotlin/com/example/dimon_assistant
           cp android-src/com/example/dimon_assistant/*.kt android/app/src/main/kotlin/com/example/dimon_assistant/
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("android/gradle/wrapper/gradle-wrapper.properties")
+          p.write_text(p.read_text().replace("services.gradle.org", "downloads.gradle.org"))
+          PY
       - name: Configure Android SDK levels
         shell: bash
         run: |

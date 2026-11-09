@@ -29,7 +29,7 @@ jobs:
           cp /tmp/cookie-AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           mkdir -p android/app/src/main/kotlin/com/example/dimon_assistant
           cp android-src/com/example/dimon_assistant/*.kt android/app/src/main/kotlin/com/example/dimon_assistant/
-      - name: Configure Android SDK levels
+      - name: Configure Android SDK and Kotlin versions
         shell: bash
         run: |
           python3 - <<'PY'
@@ -37,8 +37,14 @@ jobs:
           import re
           p=Path("android/app/build.gradle")
           s=p.read_text()
-          s=re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion','compileSdk = 36',s)
-          s=re.sub(r'minSdk\s*=\s*flutter\.minSdkVersion','minSdk = 24',s)
+          s=re.sub(r'compileSdk\\s*=\\s*flutter\\.compileSdkVersion','compileSdk = 36',s)
+          s=re.sub(r'minSdk\\s*=\\s*flutter\\.minSdkVersion','minSdk = 24',s)
+          p.write_text(s)
+          p=Path("android/settings.gradle")
+          s=p.read_text()
+          s,n=re.subn(r'(id\\s+["\\']org\\.jetbrains\\.kotlin\\.android["\\']\\s+version\\s+["\\'])[^"\\']+(["\\'])',r'\\g<1>2.2.20\\2',s)
+          if n == 0:
+              raise SystemExit("Could not locate Kotlin Android Gradle plugin declaration")
           p.write_text(s)
           PY
       - run: flutter pub get
